@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Municipal</string>
+    <string-array name="state">
+        <item>Select State</item>
+        <item>State 1</item>
+        <item>State 2</item>
+        <item>State 3</item>
+        <item>State 4</item>
+        <item>State 5</item>
+        <item>State 6</item>
+        <item>State 7</item>
+    </string-array>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
