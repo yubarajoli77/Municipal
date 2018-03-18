@@ -38,15 +38,18 @@
         <activity
             android:name=".Feedback"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
-
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
+            android:theme="@style/AppTheme.NoActionBar" />
+        android:name="com.google.android.gms.version"
+        android:value="@integer/google_play_services_version" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDOMd2j82kkRmWXnYRRLT4cyKFZftn8aEs" />
 
-        <activity android:name=".NoNet"></activity>
+        <activity android:name=".NoNet" />
+        <activity
+            android:name=".PagerActivity"
+            android:label="@string/title_activity_pager"
+            android:theme="@style/MyTheme" />
     </application>
 
 </manifest>

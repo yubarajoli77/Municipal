@@ -1,35 +1,42 @@
 package com.example.yubaraj.municipal;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Handler;
-import android.preference.PreferenceManager;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.Layout;
+import android.util.Base64;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -50,8 +57,6 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.places.AutocompleteFilter;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
-import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
-import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -64,9 +69,13 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.sothree.slidinguppanel.SlidingUpPanelLayout;
+import com.sothree.slidinguppanel.SlidingUpPanelLayout.PanelState;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -76,9 +85,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback{
+import static com.example.yubaraj.municipal.PagerActivity.readSharedSetting;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private Spinner districtSpinner, stateSpinner, vdcSpinner;
-    private Button show;
+    private FloatingActionButton show;
+    private ImageView imageView, mapImageView;
     private GoogleMap mGoogleMap;
     private Marker marker;
     private Geocoder geocoder;
@@ -87,63 +99,47 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean isInfoWindowShown = false;
     private static final String TAG = MainActivity.class.getSimpleName();
     private String m_Text = "";
-    boolean doubleBackToExitPressedOnce = false;
+    private int isStartup = 0;
     private String location;
-    private String fixURL;
-    private String totalPopulation,totalArea,head,subHead,newVdc;
-    String population,area,website,mayor,deputMayor;
+    //variables for new vdc details
+    private String totalPopulation, totalArea, head,subHead,newVdc,headEmail,headPhone;
+    //variables for state details
+    private String population, area, website, mayor, deputMayor,capital,populationDensity,statePicture,mayorEmail,mayorPhone;
+    private Bitmap pic;
     private int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
-    private static final LatLngBounds LAT_LNG_BOUNDS=new LatLngBounds(
-            new LatLng(27.037782, 78.947213),
-   new LatLng(29.615528, 88.627444)
-    );
-
+    private SlidingUpPanelLayout slidingView;
+    private boolean isUp;
+    private boolean isUserFirstTime;
+    public static String PREF_USER_FIRST_TIME;
+    private View slider;
+    private TextView tvMayorOrHead,tvDeputeMayorOrSubHead,tvMayorOrHeadEmail;
+    private TextView tvMayorOrHeadPhone,tvPopulation,tvArea,tvWebsite,tvCapital;
+    private TextView tvPopulationDensity,tvPicture;
+    private View divider0,divider1,divider2,divider3,divider4,divider5,divider6,divider7,divider8;
+    private TextView tvCapitalLabel,tvMayorOrHeadLabel,tvDeputeMayorOrSubHeadLabel,tvHeadEmailLabel,tvHeadPhoneLabel;
+    private TextView tvWebsiteLabel,tvTotalPopulationLabel,tvPopulationDensityLabel,tvAreaLabel;
     // private FusedLocationProviderClient mFusedLocationClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //onBoardShow start
-        SharedPreferences sharedPreferences =
-                PreferenceManager.getDefaultSharedPreferences(this);
-        // Check if we need to display our OnboardingFragment
-        if (!sharedPreferences.getBoolean(
-                MyOnboardingFragment.COMPLETED_ONBOARDING_PREF_NAME, false)) {
-            // The user hasn't seen the OnboardingFragment yet, so show it
-            startActivity(new Intent(this, OnboardingActivity.class));
-        }
+        //Onboarding segment to check whether user seen the onboarding intro or nto start
+        isUserFirstTime = Boolean.valueOf(readSharedSetting(MainActivity.this, PREF_USER_FIRST_TIME, "true"));
 
-        //onBoard end
+        Intent introIntent = new Intent(MainActivity.this, PagerActivity.class);
+        introIntent.putExtra(PREF_USER_FIRST_TIME, isUserFirstTime);
+
+        if (isUserFirstTime)
+            startActivity(introIntent);
+        //Onboarding end
 
         if (googleServicesAvailable()) {
             setContentView(R.layout.activity_main);
             initialize();
-//AutoComplete Address
-//            PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
-//                    getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-//
-//            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-//                @Override
-//                public void onPlaceSelected(Place place) {
-//                    // TODO: Get info about the selected place.
-//                    Log.i(TAG, "Place: " + place.getName());
-//                }
-//
-//                @Override
-//                public void onError(Status status) {
-//                    // TODO: Handle the error.
-//                    Log.i(TAG, "An error occurred: " + status);
-//                }
-//            });
-
-
-
-
 
         } else {
             //No Google map layout
         }
-
 
 
     }
@@ -151,23 +147,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     //Inflate menu item
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu,menu);
+        getMenuInflater().inflate(R.menu.menu, menu);
         return super.onCreateOptionsMenu(menu);
     }
 
     //Handle the menu Item selected
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id=item.getItemId();
-        if(id==R.id.action_feedback)
-        {
+        int id = item.getItemId();
+        if (id == R.id.action_feedback) {
             startActivity(new Intent(this, Feedback.class));
         }
-        if(id==R.id.action_about)
-        {
+        if (id == R.id.action_about) {
 
         }
-        if(id==R.id.action_search){
+        if (id == R.id.action_search) {
 
             googleSearchBox();
 
@@ -221,40 +215,35 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     // Ask user to exit or not
     @Override
     public void onBackPressed() {
-        AlertDialog.Builder builder=new AlertDialog.Builder(this);
-        builder.setCancelable(true);
-        builder.setTitle("Do you want to Exit?");
-        builder.setPositiveButton("Yes",new DialogInterface.OnClickListener() {
 
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                finish();
-            }
-        });
-        builder.setNegativeButton("No",new DialogInterface.OnClickListener() {
+        if (slidingView != null &&
 
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
+                (slidingView.getPanelState() == PanelState.EXPANDED || slidingView.getPanelState() == PanelState.ANCHORED)) {
 
-            }
-        });
-//        builder.setNeutralButton("Rate",new DialogInterface.OnClickListener() {
-//
-//            @Override
-//            public void onClick(DialogInterface dialog, int which) {
-//
-//                final String appPackageName = getPackageName(); // getPackageName() from Context or Activity object
-//                try {
-//                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + getPackageName())));
-//                } catch (android.content.ActivityNotFoundException anfe) {
-//                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + getPackageName())));
-//                }
-//
-//            }
-//        });
-        AlertDialog alert=builder.create();
-        alert.show();
+            slidingView.setPanelState(PanelState.COLLAPSED);
+
+        } else {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setCancelable(true);
+            builder.setTitle("Do you want to Exit?");
+            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    finish();
+                }
+            });
+            builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+
+                }
+            });
+            AlertDialog alert = builder.create();
+            alert.show();
+        }
         //super.onBackPressed();
     }
 
@@ -276,34 +265,68 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         districtSpinner = findViewById(R.id.district_spinner);
         stateSpinner = findViewById(R.id.state_spinner);
         vdcSpinner = findViewById(R.id.vdc_spinner);
+        //up, down and drag arrow in the sliding pannel
+        imageView = findViewById(R.id.sliding_image_view);
+        //small map of state or district in sliding view
+        mapImageView = findViewById(R.id.map_view);
+        tvMayorOrHead=findViewById(R.id.text_view_head);
+        tvDeputeMayorOrSubHead=findViewById(R.id.text_view_sub_head);
+        tvMayorOrHeadEmail=findViewById(R.id.text_view_email);
+        tvMayorOrHeadPhone=findViewById(R.id.text_view_phone);
+        tvPopulation=findViewById(R.id.text_view_total_population);
+        tvArea=findViewById(R.id.text_view_total_area);
+        tvWebsite=findViewById(R.id.text_view_website);
+        tvCapital=findViewById(R.id.text_view_capital);
+        tvPopulationDensity=findViewById(R.id.text_view_population_density);
+        tvDeputeMayorOrSubHeadLabel=findViewById(R.id.label_sub_head);
+        tvMayorOrHeadLabel=findViewById(R.id.label_sub_head);
+
+        divider0=findViewById(R.id.divider0);
+        divider1=findViewById(R.id.divider1);
+        divider2=findViewById(R.id.divider2);
+        divider3=findViewById(R.id.divider3);
+        divider4=findViewById(R.id.divider4);
+        divider5=findViewById(R.id.divider5);
+        divider6=findViewById(R.id.divider6);
+        divider7=findViewById(R.id.divider7);
+
+        tvWebsiteLabel=findViewById(R.id.label_website);
+        tvTotalPopulationLabel=findViewById(R.id.label_total_population);
+        tvPopulationDensityLabel=findViewById(R.id.label_population_density);
+        tvAreaLabel=findViewById(R.id.label_total_area);
+        tvCapitalLabel=findViewById(R.id.label_capital);
+        tvHeadEmailLabel=findViewById(R.id.label_email);
+        tvHeadPhoneLabel=findViewById(R.id.label_phone);
+
 //        show = findViewById(R.id.show_local_gov);
         geocoder = new Geocoder(this, Locale.getDefault());
-        // mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         checkNetConnection();
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.fragment);
         mapFragment.getMapAsync(this);
+        slidingView = findViewById(R.id.sliding_layout);
+        slider=findViewById(R.id.sliding_view);
 
         doWork();
     }
 
     private void checkNetConnection() {
-        CheckInternet checkInternet=new CheckInternet();
-        if (checkInternet.isNetworkAvailable(this)==false) {
+        CheckInternet checkInternet = new CheckInternet();
+        if (checkInternet.isNetworkAvailable(this) == false) {
 
 //             Toast.makeText(this,"Please turn on wifi or mobile data",Toast.LENGTH_LONG).show();
-           Intent intent=new Intent(this,NoNet.class);
-           intent.putExtra("message","Please turn on wifi or mobile data and \n Pull down to refresh ");
+            Intent intent = new Intent(this, NoNet.class);
+            intent.putExtra("message", "Please turn on wifi or mobile data and \n Pull down to refresh ");
             startActivity(intent);
             finish();
-             return;
+            return;
 
 
-        } else if(checkInternet.isOnline()==false) {
+        } else if (checkInternet.isOnline() == false) {
 
-            Toast.makeText(this,"Internet is not available",Toast.LENGTH_LONG).show();
-            Intent intent=new Intent(this,NoNet.class);
-            intent.putExtra("message","Internet is not available\nPull down to refresh ");
+            Toast.makeText(this, "Internet is not available", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(this, NoNet.class);
+            intent.putExtra("message", "Internet is not available\nPull down to refresh ");
             startActivity(intent);
             return;
 
@@ -311,75 +334,115 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-
-
     public void doWork() {
         //Selecting dropdown item from values/string
-        ArrayAdapter<CharSequence> state=ArrayAdapter.createFromResource(this,R.array.state,android.R.layout.simple_list_item_1);
+        ArrayAdapter<CharSequence> state = ArrayAdapter.createFromResource(this, R.array.state, android.R.layout.simple_list_item_1);
         state.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         stateSpinner.setAdapter(state);
+        slidingView.addPanelSlideListener(new SlidingUpPanelLayout.PanelSlideListener() {
+
+            @Override
+
+            public void onPanelSlide(View panel, float slideOffset) {
+
+
+                Log.i(TAG, "onPanelSlide, offset " + slideOffset);
+
+            }
+
+            @Override
+
+            public void onPanelStateChanged(View panel, PanelState previousState, PanelState newState) {
+                if (newState.toString().equals("EXPANDED")) {
+                    imageView.setImageResource(R.drawable.ic_keyboard_arrow_down_white_24dp);
+                } else if (newState.toString().equals("COLLAPSED")) {
+                    imageView.setImageResource(R.drawable.ic_keyboard_arrow_up_white_24dp);
+                } else if (newState.toString().equals("DRAGGING")) {
+                    imageView.setImageResource(R.drawable.ic_drag_handle_white_24dp);
+                }
+                Log.i(TAG, "onPanelStateChanged " + newState);
+
+            }
+
+
+        });
+        mapImageView.setOnClickListener(new View.OnClickListener() {
+            String string = null;
+
+            @Override
+            public void onClick(View view) {
+                loadPhoto(pic);
+            }
+        });
 
         stateSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
 
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(!stateSpinner.getSelectedItem().equals("Select State")) {
-                    String state= (String) stateSpinner.getSelectedItem();
-                    String finalURL = makeUrl(state);
+                if (++isStartup > 1) {
 
-                    String paramValue =state;
-                    paramValue=paramValue.replaceAll(" ","%20");
+                    if (!stateSpinner.getSelectedItem().equals("Select State")) {
+                        slider.setVisibility(View.VISIBLE);
+                        String state = (String) stateSpinner.getSelectedItem();
+                        String finalDistrictListUrl = makeFinalUrl("http://192.168.100.178:8088/localLevel/rest/districts/state/", state);
+                        loadSpinnerData(districtSpinner, finalDistrictListUrl, "district");
 
-                    String urll = null;
-                    try {
-                        urll = "http://192.168.100.178:8088/localLevel/states/" + java.net.URLEncoder.encode(paramValue, "UTF-8");
-                        urll=urll.replaceAll("%2520","%20");
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        java.net.URL URL = new java.net.URL(urll);
-                        fixURL=URL.toString();
-                        Log.d("URL:::", fixURL);
+                        String finalStateDetailUrl=makeFinalUrl("http://192.168.100.178:8088/localLevel/rest/states/state/",state);
+                        Log.d("Show Url::",finalDistrictListUrl+", "+finalStateDetailUrl);
+                        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+                        StringRequest stringRequest = new StringRequest(Request.Method.GET, finalStateDetailUrl, new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                try {
+                                    JSONObject jsonObject = new JSONObject(response);
+                                    population = jsonObject.getString("population");
+                                    area = jsonObject.getString("area");
+                                    mayor = jsonObject.getString("mayor");
+                                    deputMayor = jsonObject.getString("deputMayor");
+                                    website = jsonObject.getString("website");
+                                    capital=jsonObject.getString("capital");
+                                    statePicture=jsonObject.getString("statePicture");
+                                    populationDensity=jsonObject.getString("density");
 
-                    } catch (MalformedURLException e) {
-                        e.printStackTrace();
-                    }
 
-                    RequestQueue requestQueue= Volley.newRequestQueue(getApplicationContext());
-                    StringRequest stringRequest=new StringRequest(Request.Method.GET,fixURL, new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            try{
-                                JSONObject jsonObject=new JSONObject(response);
-                                population=jsonObject.getString("population");
-                                area=jsonObject.getString("area");
-                                mayor=jsonObject.getString("mayor");
-                                deputMayor=jsonObject.getString("deputMayor");
-                                website=jsonObject.getString("website");
+                                    tvArea.setText(area);
+                                    tvCapital.setText(capital);
+                                    tvMayorOrHeadLabel.setText("Mayor");
+                                    tvMayorOrHead.setText(mayor);
+                                    tvDeputeMayorOrSubHeadLabel.setText("Deput Mayor");
+                                    tvDeputeMayorOrSubHead.setText(deputMayor);
+                                    tvWebsite.setText(website);
+                                    tvPopulationDensity.setText(populationDensity);
+                                    tvPopulation.setText(population);
+
+                                    byte[] decodeValue = Base64.decode(statePicture, Base64.DEFAULT);
+                                    pic = BitmapFactory.decodeByteArray(decodeValue, 0, decodeValue.length);
+                                    mapImageView.setImageBitmap(pic);
+                                    slidingView.setPanelState(PanelState.EXPANDED);
 
                                 } catch (JSONException e1) {
-                                e1.printStackTrace();
+                                    e1.printStackTrace();
+                                }
+                                Log.d("Data::", population + ", " + deputMayor + ", " + website);
                             }
-                                Log.d("Data::",population+", "+deputMayor+", "+website);
-                        }
-                    }, new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            error.printStackTrace();
-                        }
-                    });
+                        }, new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                error.printStackTrace();
+                            }
+                        });
 
-                    int socketTimeout = 30000;
-                    RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
-                    stringRequest.setRetryPolicy(policy);
-                    requestQueue.add(stringRequest);
-                    sDSnackBar(stateSpinner.getSelectedItem().toString());
+                        int socketTimeout = 30000;
+                        RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
+                        stringRequest.setRetryPolicy(policy);
+                        requestQueue.add(stringRequest);
+                       // sDSnackBar(stateSpinner.getSelectedItem().toString());
 
 
-                    loadSpinnerData(districtSpinner, finalURL,"district");
 
+
+                    }
                 }
 
             }
@@ -400,28 +463,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         districtSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String district=districtSpinner.getSelectedItem().toString();
-                if(!district.equals("Select district")&&!district.equals("Select One")) {
-                    //String finalURL=makeUrl(district);
+                if (++isStartup > 2) {
+                    String district = districtSpinner.getSelectedItem().toString();
+                    if ((districtSpinner.getSelectedItem().equals("Select district")) && (stateSpinner.getSelectedItem().equals("Select State"))) {
+                        stateSpinner.performClick();
+                        Toast.makeText(MainActivity.this, "Please Select the state first", Toast.LENGTH_SHORT).show();
+                    } else if (!district.equals("Select district") && !district.equals("Select One")) {
+                        String finalOldVdcListUrl = makeFinalUrl("http://192.168.100.178:8088/localLevel/rest/oldVdcs/district/", district);
+                        String finalDistrictDetailUrl=makeFinalUrl("http://192.168.100.178:8088/localLevel/rest/districts/district/",district);
+                        loadSpinnerData(vdcSpinner, finalOldVdcListUrl, "oldVdc");
 
-                    String paramValue =district;
-                    String urll = null;
-                    try {
-                        urll = "http://192.168.100.178:8088/localLevel/oldVdcs/" + java.net.URLEncoder.encode(paramValue, "UTF-8");
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
                     }
-                    try {
-                        java.net.URL URL = new java.net.URL(urll);
-                        loadSpinnerData(vdcSpinner, URL.toString(),"oldVdc");
-                        Log.d("URL:::", URL.toString());
-                    } catch (MalformedURLException e) {
-                        e.printStackTrace();
-                    }
-
-                    Toast.makeText(MainActivity.this, district, Toast.LENGTH_SHORT).show();
-
-                }
 //                else if(district.equals("Select district")){
 //                    Toast.makeText(MainActivity.this, "Please Select the state first", Toast.LENGTH_SHORT).show();
 //                    stateSpinner.setFocusable(true);
@@ -429,6 +481,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 //                   // stateSpinner.performClick();
 //                    Toast.makeText(MainActivity.this, "Clicked"+district, Toast.LENGTH_SHORT).show();
 //                }
+
+                }
             }
 
             @Override
@@ -438,15 +492,116 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
 
 
-        String vdclist[]={"Select Vdc"};
-        ArrayAdapter<String>vdc=new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,vdclist);
+        String vdclist[] = {"Select Vdc"};
+        ArrayAdapter<String> vdc = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, vdclist);
         vdc.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         vdcSpinner.setAdapter(vdc);
 
         vdcSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //TODO for item selected
+                if (++isStartup > 3) {
+                    final String district, vdc, state;
+                    state = stateSpinner.getSelectedItem().toString();
+                    district = districtSpinner.getSelectedItem().toString();
+                    vdc = String.valueOf(vdcSpinner.getSelectedItem());
+
+                    if ((vdcSpinner.getSelectedItem().equals("Select Vdc")) && (districtSpinner.getSelectedItem().equals("Select district"))) {
+                        stateSpinner.performClick();
+                        Toast.makeText(MainActivity.this, "Please Select the state first", Toast.LENGTH_SHORT).show();
+                    } else if ((vdcSpinner.getSelectedItem().equals("Select Vdc")) && (districtSpinner.getSelectedItem().equals("Select One"))) {
+                        districtSpinner.performClick();
+                        Toast.makeText(MainActivity.this, "Please Select the district first", Toast.LENGTH_SHORT).show();
+                    } else if (!(vdc.equals("Select Vdc")) && !(vdc.equals("Select One"))) {
+                        location = district + ", " + vdc + ", " + "Nepal";
+                        Log.d("location::", String.valueOf(location));
+
+                        try {
+                            List<Address> addressList = geocoder.getFromLocationName(location, 1);
+                            if (!addressList.isEmpty()) {
+                                Address address = addressList.get(0);
+                                LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
+                                addMarker(latLng, address);
+                            } else {
+
+                                Toast.makeText(MainActivity.this, "No match found, Please enter the places nearby", Toast.LENGTH_SHORT).show();
+                                // alternateChoice(district);
+                                googleSearchBox();
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        //start of show click
+                        String parameter = (String) vdcSpinner.getSelectedItem();
+                        String finalNewVdcDetailUrl = makeFinalUrl("http://192.168.100.178:8088/localLevel/rest/newVdcs/newVdcDetails/", parameter);
+
+                        final ArrayList<String> oldVdcArray = new ArrayList<String>();
+
+                        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+                        StringRequest stringRequest = new StringRequest(Request.Method.GET, finalNewVdcDetailUrl, new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                try {
+                                    JSONObject jsonObject = new JSONObject(response);
+                                    totalPopulation = jsonObject.getString("population");
+                                    totalArea = jsonObject.getString("area");
+                                    head = jsonObject.getString("head");
+                                    subHead = jsonObject.getString("subHead");
+                                    newVdc = jsonObject.getString("newVdc");
+                                    headEmail=jsonObject.getString("email");
+
+                                    tvArea.setText(totalArea);
+
+                                    tvCapital.setVisibility(View.GONE);
+                                    tvCapitalLabel.setVisibility(View.GONE);
+                                    divider0.setVisibility(View.GONE);
+                                    tvMayorOrHead.setText(head);
+                                    tvDeputeMayorOrSubHead.setText(subHead);
+                                    tvWebsite.setVisibility(View.GONE);
+                                    tvWebsiteLabel.setVisibility(View.GONE);
+                                    divider5.setVisibility(View.GONE);
+                                    tvPopulationDensity.setVisibility(View.GONE);
+                                    tvPopulationDensityLabel.setVisibility(View.GONE);
+                                    divider7.setVisibility(View.GONE);
+                                    tvPopulation.setText(totalPopulation);
+                                    tvMayorOrHeadEmail.setText(headEmail);
+
+                                    slidingView.setPanelState(PanelState.EXPANDED);
+
+                                    JSONArray jsonArray = jsonObject.getJSONArray("oldVdc");
+                                    ArrayList<String> arrayList = new ArrayList<>();
+                                    arrayList.add("Select One");
+                                    for (int i = 0; i < jsonArray.length(); i++) {
+                                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                                        String nameList = jsonObject1.getString("oldVdc");
+                                        oldVdcArray.add(nameList);
+                                    }
+                                    Log.d("OldVdc::", oldVdcArray.toString());
+                                    Log.d("Data::", totalPopulation + ", " + totalArea + ", " + head + ", " + subHead);
+
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                error.printStackTrace();
+                            }
+                        });
+
+                        int socketTimeout = 30000;
+                        RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
+                        stringRequest.setRetryPolicy(policy);
+                        requestQueue.add(stringRequest);
+                        //End of show click
+
+                       // showSnackBarAction(newVdc);
+
+                    }
+
+                }
+
             }
 
             @Override
@@ -454,194 +609,122 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
-
-//        show.setOnClickListener(
-//                new View.OnClickListener() {
-//                    @SuppressLint("ResourceAsColor")
-//                    @Override
-//                    public void onClick(View v) {
-//                        checkNetConnection();
-//                        final String[] detailUrl = {null};
-//
-//                        final String district,vdc,state;
-//                        state=stateSpinner.getSelectedItem().toString();
-//                        district=districtSpinner.getSelectedItem().toString();
-//                        vdc=String.valueOf(vdcSpinner.getSelectedItem());
-//                        if(state.equals("Select State")){
-//                            Toast.makeText(MainActivity.this, "Please select state first"
-//                                    , Toast.LENGTH_SHORT).show();
-//                            stateSpinner.performClick();
-//                            return;
-//                        }else if (district.equals("Select One")){
-//                            Toast.makeText(MainActivity.this, "Please select district first"
-//                                    , Toast.LENGTH_SHORT).show();
-//                            districtSpinner.performClick();
-//                            return;
-//                        }else if(vdc.equals("Select One")){
-//                            Toast.makeText(MainActivity.this, "Please select vdc first", Toast.LENGTH_SHORT).show();
-//                            vdcSpinner.performClick();
-//                        }
-//                        location=district+", "+vdc+", "+"Nepal";
-//                        Log.d("location::",String.valueOf(location));
-//
-//                        try {
-//                            List<Address>addressList=geocoder.getFromLocationName(location,1);
-//                            if(!addressList.isEmpty()) {
-//                                Address address=addressList.get(0);
-//                                LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
-//                                addMarker(latLng, address);
-//                            }
-//                            else {
-//
-//                                Toast.makeText(MainActivity.this, "No match found, Please enter the places nearby", Toast.LENGTH_SHORT).show();
-//                              // alternateChoice(district);
-//                                googleSearchBox();
-//                            }
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                        //start of show click
-//                        String parameter = (String)vdcSpinner.getSelectedItem();
-//                        String urll = null;
-//                        try {
-//                            urll = "http://192.168.100.178:8088/localLevel/newVdcs/newVdcDetails/" + java.net.URLEncoder.encode(parameter, "UTF-8");
-//                        } catch (UnsupportedEncodingException e) {
-//                            e.printStackTrace();
-//                        }
-//                        try {
-//                            java.net.URL URL = new java.net.URL(urll);
-//                            Log.d("URL:::", URL.toString());
-//                            detailUrl[0] =String.valueOf(URL);
-//                        } catch (MalformedURLException e) {
-//                            e.printStackTrace();
-//                        }
-//                        final ArrayList<String>oldVdcArray=new ArrayList<String>();
-//
-//                        RequestQueue requestQueue= Volley.newRequestQueue(getApplicationContext());
-//                        StringRequest stringRequest=new StringRequest(Request.Method.GET, detailUrl[0], new Response.Listener<String>() {
-//                            @Override
-//                            public void onResponse(String response) {
-//                                try{
-//                                    JSONObject jsonObject=new JSONObject(response);
-//                                    totalPopulation=jsonObject.getString("population");
-//                                    totalArea=jsonObject.getString("area");
-//                                    head=jsonObject.getString("head");
-//                                    subHead=jsonObject.getString("subHead");
-//                                    newVdc=jsonObject.getString("newVdc");
-//
-//                                    JSONArray jsonArray=jsonObject.getJSONArray("oldVdc");
-//                                    ArrayList<String>arrayList=new ArrayList<>();
-//                                    arrayList.add("Select One");
-//                                    for(int i=0;i<jsonArray.length();i++){
-//                                        JSONObject jsonObject1=jsonArray.getJSONObject(i);
-//                                        String nameList=jsonObject1.getString("oldVdc");
-//                                        oldVdcArray.add(nameList);
-//                                    }
-//                                    Log.d("OldVdc::",oldVdcArray.toString());
-//                                    Log.d("Data::",totalPopulation+", "+totalArea+", "+head+", "+subHead);
-//
-//                                }catch (JSONException e){e.printStackTrace();}
-//                            }
-//                        }, new Response.ErrorListener() {
-//                            @Override
-//                            public void onErrorResponse(VolleyError error) {
-//                                error.printStackTrace();
-//                            }
-//                        });
-//
-//                        int socketTimeout = 30000;
-//                        RetryPolicy policy = new DefaultRetryPolicy(socketTimeout, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
-//                        stringRequest.setRetryPolicy(policy);
-//                        requestQueue.add(stringRequest);
-//                        //End of show click
-//
-//                      showSnackBarAction(newVdc);
-//
-//
-//                    }
-//                }
-//        );
-
     }
 
-    private String makeUrl(String paramValue) {
-        paramValue=paramValue.replaceAll(" ","%20");
-        Log.d("State Parameter::",paramValue);
-        String urll = null;
-        try {
-            urll = "http://192.168.100.178:8088/localLevel/districts/"+java.net.URLEncoder.encode(paramValue, "UTF-8");
-            Log.d("Pre URL::",urll);
-            urll=urll.replaceAll("%2520","%20");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        try {
-            URL URL = new URL(urll);
-            return (String.valueOf(URL));
+    private String makeFinalUrl(String baseUrl, String param) {
+        String parameter = param;
+        String urlWithParameter = null;
+        String encodedUrl = null;
+        if (param != null) {
+            if (param.contains(" ")) {
 
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+                parameter = param.replaceAll(" ", "%20");
+            }
+            try {
+                urlWithParameter = baseUrl + java.net.URLEncoder.encode(parameter, "UTF-8");
+                Log.d("Pre URL::", urlWithParameter);
+                urlWithParameter = urlWithParameter.replaceAll("%2520", "%20");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+            try {
+                URL URL = new URL(urlWithParameter);
+                encodedUrl = String.valueOf(URL);
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        } else {
+            URL URL = null;
+            try {
+                URL = new URL(baseUrl);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            encodedUrl = String.valueOf(URL);
         }
-        return urll;
+        return encodedUrl;
     }
+
+//    private String makeUrl(String paramValue) {
+//        paramValue = paramValue.replaceAll(" ", "%20");
+//        Log.d("State Parameter::", paramValue);
+//        String urll = null;
+//        try {
+//            urll = "http://192.168.100.178:8088/localLevel/rest/districts/" + java.net.URLEncoder.encode(paramValue, "UTF-8");
+//            Log.d("Pre URL::", urll);
+//            urll = urll.replaceAll("%2520", "%20");
+//        } catch (UnsupportedEncodingException e) {
+//            e.printStackTrace();
+//        }
+//        try {
+//            URL URL = new URL(urll);
+//            return (String.valueOf(URL));
+//
+//        } catch (MalformedURLException e) {
+//            e.printStackTrace();
+//        }
+//        return urll;
+//    }
 
     private void showSnackBarAction(String bodyText) {
         View parentLayout = findViewById(android.R.id.content);
 
-        Snackbar snackbar=Snackbar.make(parentLayout, bodyText, Snackbar.LENGTH_LONG);
+        Snackbar snackbar = Snackbar.make(parentLayout, bodyText, Snackbar.LENGTH_LONG);
         snackbar.setAction("More Details", new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //Showing the detail of selected items
-                StringBuffer stringBuffer=new StringBuffer();
-                stringBuffer.append("State: "+stateSpinner.getSelectedItem()+"\n");
-                stringBuffer.append("Local level: "+newVdc+"\n");
-                stringBuffer.append("Head: "+head+"\n");
-                stringBuffer.append("SubHead: "+subHead+"\n");
-                stringBuffer.append("Total population: "+totalPopulation+"\n");
-                stringBuffer.append("Total area: "+totalArea+"\n");
+                StringBuffer stringBuffer = new StringBuffer();
+                stringBuffer.append("State: " + stateSpinner.getSelectedItem() + "\n");
+                stringBuffer.append("Local level: " + newVdc + "\n");
+                stringBuffer.append("Head: " + head + "\n");
+                stringBuffer.append("SubHead: " + subHead + "\n");
+                stringBuffer.append("Total population: " + totalPopulation + "\n");
+                stringBuffer.append("Total area: " + totalArea + "\n");
 
-                showMessage("Details" ,stringBuffer.toString());
+                showMessage("Details", stringBuffer.toString());
 
             }
         });
-        snackbar.setActionTextColor(getResources().getColor(android.R.color.holo_blue_light ));
-        View snackbarView=snackbar.getView();
+        snackbar.setActionTextColor(getResources().getColor(android.R.color.holo_blue_light));
+        View snackbarView = snackbar.getView();
         snackbarView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, R.color.colorPrimaryDark));
         TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
         textView.setTextColor(Color.WHITE);
         snackbar.show();
 
     }
-    private void sDSnackBar(String body){
+
+    private void sDSnackBar(String body) {
         View parentLayout = findViewById(android.R.id.content);
 
-        Snackbar snackbar=Snackbar.make(parentLayout, body, Snackbar.LENGTH_LONG);
+        Snackbar snackbar = Snackbar.make(parentLayout, body, Snackbar.LENGTH_LONG);
         snackbar.setAction("More Details", new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //Showing the detail of selected items
-                StringBuffer stringBuffer=new StringBuffer();
-                stringBuffer.append("State: "+stateSpinner.getSelectedItem()+"\n");
-                stringBuffer.append("Mayor: "+mayor+"\n");
-                stringBuffer.append("DeputMayor: "+deputMayor+"\n");
-                stringBuffer.append("Total population: "+population+"\n");
-                stringBuffer.append("Total area: "+area+"\n");
+                StringBuffer stringBuffer = new StringBuffer();
+                stringBuffer.append("State: " + stateSpinner.getSelectedItem() + "\n");
+                stringBuffer.append("Mayor: " + mayor + "\n");
+                stringBuffer.append("DeputMayor: " + deputMayor + "\n");
+                stringBuffer.append("Total population: " + population + "\n");
+                stringBuffer.append("Total area: " + area + "\n");
 
-                showMessage("Details" ,stringBuffer.toString());
+                showMessage("Details", stringBuffer.toString());
 
             }
         });
-        snackbar.setActionTextColor(getResources().getColor(android.R.color.holo_blue_light ));
-        View snackbarView=snackbar.getView();
+        snackbar.setActionTextColor(getResources().getColor(android.R.color.holo_blue_light));
+        View snackbarView = snackbar.getView();
         snackbarView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, R.color.colorPrimaryDark));
         TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
         textView.setTextColor(Color.WHITE);
         snackbar.show();
     }
 
-    public void showMessage(String title,String message){
-        android.support.v7.app.AlertDialog.Builder builder= new android.support.v7.app.AlertDialog.Builder(this);
+    public void showMessage(String title, String message) {
+        android.support.v7.app.AlertDialog.Builder builder = new android.support.v7.app.AlertDialog.Builder(this);
         builder.setCancelable(true);
         builder.setTitle(title);
         builder.setMessage(message);
@@ -665,16 +748,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 m_Text = input.getText().toString();
-                location=district+", "+m_Text+", "+"Nepal";
+                location = district + ", " + m_Text + ", " + "Nepal";
                 //start
                 try {
-                    List<Address>addressList=geocoder.getFromLocationName(location,1);
-                    if(!addressList.isEmpty()) {
-                        Address address=addressList.get(0);
+                    List<Address> addressList = geocoder.getFromLocationName(location, 1);
+                    if (!addressList.isEmpty()) {
+                        Address address = addressList.get(0);
                         LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
                         addMarker(latLng, address);
-                    }
-                    else {
+                    } else {
 
                         Toast.makeText(MainActivity.this, "No match found", Toast.LENGTH_SHORT).show();
                         //alternateChoice(district);
@@ -880,7 +962,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).draggable(true);
 
         marker = mGoogleMap.addMarker(markerOptions);
-       // marker.showInfoWindow();
+        // marker.showInfoWindow();
         goToLocationZoom(point.latitude, point.longitude, 10);
 
         Toast.makeText(MainActivity.this, locality + "\n" + adminArea + ","
@@ -891,7 +973,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public boolean onMarkerClick(Marker marker) {
 
-               // isShowInfoWindow() always give false value so we use this method to show and hide infoWindow
+                // isShowInfoWindow() always give false value so we use this method to show and hide infoWindow
                 if (!isInfoWindowShown) {
 
                     marker.showInfoWindow();
@@ -923,7 +1005,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Log.d("lattiAndLongi::", latti + ", " + longi);
                     LatLng latLng = new LatLng(latti, longi);
                     try {
-                        List <Address> addressess = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+                        List<Address> addressess = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -942,24 +1024,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     private void loadSpinnerData(final Spinner spinner, String url, final String whatToFind) {
-        RequestQueue requestQueue= Volley.newRequestQueue(getApplicationContext());
-        StringRequest stringRequest=new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
+        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                 try{
+                try {
 //                    JSONObject jsonObject=new JSONObject(response);
 //                        JSONArray jsonArray=jsonObject.getJSONArray("Name");
-                    ArrayList<String>arrayList=new ArrayList<>();
-                     arrayList.add("Select One");
-                     JSONArray jsonArray=new JSONArray(response);
-                        for(int i=0;i<jsonArray.length();i++){
-                            JSONObject jsonObject1=jsonArray.getJSONObject(i);
-                            String nameList=jsonObject1.getString(whatToFind);
-                            arrayList.add(nameList);
-                        }
+                    ArrayList<String> arrayList = new ArrayList<>();
+                    arrayList.add("Select One");
+                    JSONArray jsonArray = new JSONArray(response);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                        String nameList = jsonObject1.getString(whatToFind);
+                        arrayList.add(nameList);
+                    }
 
                     spinner.setAdapter(new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, arrayList));
-                }catch (JSONException e){e.printStackTrace();}
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         }, new Response.ErrorListener() {
             @Override
@@ -986,7 +1070,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     e.printStackTrace();
                 }
                 android.location.Address address = addresses.get(0);
-                addMarker(latLng,address);
+                addMarker(latLng, address);
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
                 Status status = PlaceAutocomplete.getStatus(this, data);
                 // TODO: Handle the error.
@@ -998,7 +1082,77 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    public void slideUp(View view) {
+        TranslateAnimation animate = new TranslateAnimation(
+                0,                 // fromXDelta
+                0,                 // toXDelta
+                view.getHeight(),  // fromYDelta
+                0);                // toYDelta
+        animate.setDuration(500);
+        animate.setFillAfter(true);
+        view.startAnimation(animate);
+        view.setVisibility(View.VISIBLE);
+        isUp = !isUp;
+    }
 
+    // slide the view from its current position to below itself
+    public void slideDown(View view, View inView, View rView) {
+        TranslateAnimation animate = new TranslateAnimation(
+                0,                  // fromXDelta
+                0,                      // toXDelta
+                0,                  // fromYDelta
+                view.getHeight());              // toYDelta
+        animate.setDuration(500);
+        animate.setFillAfter(true);
+        view.startAnimation(animate);
+        view.setVisibility(View.GONE);
+//        TranslateAnimation inAnimate = new TranslateAnimation(
+//                0,                  // fromXDelta
+//                0,                      // toXDelta
+//                0,                  // fromYDelta
+//               0);              // toYDelta
+//        inAnimate.setDuration(500);
+//        inAnimate.setFillAfter(true);
+//        inView.startAnimation(animate);
+//        TranslateAnimation rAnimate = new TranslateAnimation(
+//                0,                  // fromXDelta
+//                0,                      // toXDelta
+//                0,
+//                0);// fromYDelta
+//               // rView.getHeight());              // toYDelta
+//        rAnimate.setDuration(500);
+//        rAnimate.setFillAfter(true);
+//        rView.startAnimation(animate);
+
+        isUp = !isUp;
+    }
+
+    private void loadPhoto(Bitmap pic) {
+
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setContentView(R.layout.image_viewer);
+        LayoutInflater inflater = (LayoutInflater) this.getSystemService(LAYOUT_INFLATER_SERVICE);
+        View layout = inflater.inflate(R.layout.image_viewer,
+                (ViewGroup) findViewById(R.id.image_viewer_framelayout));
+        ImageView image = layout.findViewById(R.id.touch_image_view);
+//       image.setImageDrawable(imageView.getDrawable());
+//        image.getLayoutParams().height = height;
+//        image.getLayoutParams().width = width;
+//        mAttacher = new PhotoViewAttacher(image);
+        image.requestLayout();
+        dialog.setContentView(layout);
+        dialog.setCanceledOnTouchOutside(true);
+        if (pic != null) {
+            image.setImageBitmap(pic);
+        } else {
+            image.setImageResource(R.drawable.state_seven);
+        }
+
+        dialog.show();
+
+    }
 }
 
 

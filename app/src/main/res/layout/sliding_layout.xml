@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.widget.LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+    <ImageView
+        android:id="@+id/sliding_image_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:background="#558b2f"
+        android:src="@drawable/ic_keyboard_arrow_up_white_24dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:id="@+id/scroll_view"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/detail_scroll_view">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <ImageView
+            android:id="@+id/map_view"
+            android:layout_width="200dp"
+            android:layout_height="150dp"
+            android:layout_gravity="center"
+            android:layout_alignParentTop="true"
+            android:src="@drawable/state_seven" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="26dp">
+            <TextView
+                android:id="@+id/label_capital"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_location_city_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Capital"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_capital"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Example example"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider0"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="#bdbdbd"
+                android:layout_below="@id/text_view_head"/>
+            <TextView
+                android:id="@+id/label_head"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_person_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Head"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_head"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_head"
+                android:text="Example Budhathoki "
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider1"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="#bdbdbd"
+                android:layout_below="@id/text_view_head"/>
+
+            <TextView
+                android:id="@+id/label_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_email_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Email"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_email"
+                android:text="headcontactmail@gmail.com"
+                android:autoLink="email"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider2"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#bdbdbd"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:layout_below="@id/text_view_email"/>
+            <TextView
+                android:id="@+id/label_phone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/divider2"
+                android:layout_marginTop="3dp"
+                android:drawableLeft="@drawable/ic_phone_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Phone"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_phone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_phone"
+                android:autoLink="phone"
+                android:text="+977-12345678"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider3"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#bdbdbd"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:layout_below="@id/text_view_email"/>
+            <TextView
+                android:id="@+id/label_sub_head"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_person_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Sub Head"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_sub_head"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Example Sharma "
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider4"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="#bdbdbd"/>
+
+            <TextView
+                android:id="@+id/label_website"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/divider3"
+                android:drawableLeft="@drawable/ic_website_black_15dp"
+                android:drawablePadding="3dp"
+                android:text="Website"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_website"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_website"
+                android:text="newstateofnepal.com.np"
+                android:autoLink="web"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider5"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="#bdbdbd"
+                android:layout_below="@id/text_view_website"/>
+
+            <TextView
+                android:id="@+id/label_total_population"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/divider4"
+                android:layout_marginTop="3dp"
+                android:drawablePadding="3dp"
+                android:drawableLeft="@drawable/ic_people_black_15dp"
+                android:text="Total pupulation"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_total_population"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_total_population"
+                android:text="200000"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider6"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"
+                android:background="#bdbdbd"/>
+            <TextView
+                android:id="@+id/label_population_density"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Population Density"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_population_density"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="300"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+            <View
+                android:id="@+id/divider7"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="3dp"/>
+            <TextView
+                android:id="@+id/label_total_area"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/divider5"
+                android:layout_marginTop="3dp"
+                android:drawableLeft="@drawable/ic_map_black_15dp"
+                android:text="Total Area"
+                android:textColor="#000000"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_view_total_area"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/label_total_area"
+                android:text="50000 Km2"
+                android:textColor="#575757"
+                android:textSize="17sp" />
+
+        </LinearLayout>
+    </LinearLayout>
+    </ScrollView>
+
+</android.widget.LinearLayout>
